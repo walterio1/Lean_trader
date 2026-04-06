@@ -1,0 +1,20 @@
+# Remove venv
+.venv/
+
+# Remove VSCode settings
+.vscode/
+
+# Remove pycache
+__pycache__/
+
+# Remove data
+data/
+
+# Remove backtests results
+**/backtests/
+**/.idea/
+**/.vscode/
+
+# Remove futuros SP500
+futurosSP500/
+
