@@ -25,3 +25,8 @@ En cada estado evaluamos la bondad de diversas estrategias, por ejemplo:
     • Compra venta según haga el vix, ya sea up/dn del vix previo, o precio contra media del vix
     
 Por qué intraday y no diario? Porque necesitamos muestras grandes, y en diario no son suficientes. Lo serían si lo hacemos para muchos valores individuales (se amplía la muestra por múltiples series, ya que no por mayor granularidad del periodo)
+
+## TODO List
+
+- Entrar tres variables en la simulación. 
+- Preparar una de las tres variables (estructura a término) diaria.
