@@ -3,6 +3,8 @@ from AlgorithmImports import *
 from datetime import datetime
 from datetime import timedelta
 import os
+import gc
+import sys
 
 
 class SmaStrategy(QCAlgorithm):
@@ -67,27 +69,41 @@ class SmaStrategy(QCAlgorithm):
                 self.liquidate(self.symbol_SPFut)
                 self.debug(f"SELL @ {price} | SMA: {sma_value}")
 
+    def on_end_of_algorithm(self):
+        # Explicit cleanup to prevent shutdown timeout
+        self.sma = None
+        self.symbol_SPFut = None
+        self.symbol_VIXSlope = None
+        gc.collect()
+        sys.stdout.flush()
+        sys.stderr.flush()
+
 
 class SPFut(PythonData):
     '''SP500 Futures Custom Data Class'''
+    
     def get_source(self, config, date, is_live_mode):
         return SubscriptionDataSource(os.path.join(Globals.data_folder, "custom", "ES_full_1min_continuous_ratio_adjusted.txt"), SubscriptionTransportMedium.LOCAL_FILE, FileFormat.CSV)
 
     def reader(self, config, line, date, is_live_mode):
-        if not (line.strip() and line[0].isdigit()): return None
+        if not (line.strip() and line[0].isdigit()): 
+            return None
 
-        # New Nifty object
         index = SPFut()
         index.symbol = config.symbol
 
         try:
-            # Example File Format:
-            # Date,       Open       High        Low       Close     Volume      Turnover
-            # 2011-09-13  7792.9    7799.9     7722.65    7748.7    116534670    6107.78
-            # Our data
-            # 2008-01-02 06:00:00,1368.85,1370.24,1368.62,1370.01,2317
             data = line.split(',')
-            index.time = datetime.strptime(data[0], "%Y-%m-%d %H:%M:%S")
+            # Use fast datetime parsing
+            dt_str = data[0]
+            year = int(dt_str[:4])
+            month = int(dt_str[5:7])
+            day = int(dt_str[8:10])
+            hour = int(dt_str[11:13])
+            minute = int(dt_str[14:16])
+            second = int(dt_str[17:19])
+            
+            index.time = datetime(year, month, day, hour, minute, second)
             index.end_time = index.time + timedelta(minutes=1)
             index.value = float(data[4])
             index["Open"] = float(data[1])
@@ -95,7 +111,7 @@ class SPFut(PythonData):
             index["Low"] = float(data[3])
             index["Close"] = float(index.value)
             index.volume = int(data[5])
-        except ValueError:
+        except (ValueError, IndexError):
             return None
 
         return index
@@ -103,35 +119,30 @@ class SPFut(PythonData):
 
 class VIXSlope(PythonData):
     '''VIX SLope Custom Data Class'''
+    
     def get_source(self, config, date, is_live_mode):
-        return SubscriptionDataSource(os.path.join(Globals.data_folder, "custom", "Preu123.csv"), SubscriptionTransportMedium.LOCAL_FILE, FileFormat.CSV)
+        return SubscriptionDataSource(os.path.join(Globals.data_folder, "custom", "preu123.csv"), SubscriptionTransportMedium.LOCAL_FILE, FileFormat.CSV)
 
     def reader(self, config, line, date, is_live_mode):
-        if not (line.strip() and line[0].isdigit()): return None
+        if not (line.strip() and line[0].isdigit()): 
+            return None
 
-        # New Nifty object
         index = VIXSlope()
         index.symbol = config.symbol
-        # index.data_type = MarketDataType.AUXILIARY
 
         try:
-            # Example File Format:
-            # date,first,second,third,slope,contract,incFirst,incSecond
-            # 2008-01-02,23.91,23.9,Q08,-0.000418235,Q08,,
-            # 2008-01-03,23.77,23.92,Q08,0.006310475,Q08,-0.005855291,0.00083682
-            # 2008-01-04,24.42,24.35,Q08,-0.002866503,Q08,0.027345393,0.017976589
             data = line.split(',')
-            index.time = datetime.strptime(data[0], "%Y-%m-%d")
+            # Use fast datetime parsing
+            dt_str = data[0]
+            year = int(dt_str[:4])
+            month = int(dt_str[5:7])
+            day = int(dt_str[8:10])
+            
+            index.time = datetime(year, month, day)
             index.end_time = index.time + timedelta(days=1)
-            # index.value = float(data[4])
             index["Open"] = float(data[1])
             index["Close"] = float(data[2])
-            # index["Open"] = float(data[1])
-            # index["High"] = float(data[2])
-            # index["Low"] = float(data[3])
-            # index["Close"] = float(index.value)
-            # index.volume = int(data[5])
-        except ValueError:
+        except (ValueError, IndexError):
             return None
 
         return index
